@@ -1,0 +1,40 @@
+#!/bin/bash
+
+ARCHIVE=$1
+
+[ $# != 1 ] && {
+    echo "usage: safertar /path/to/archive.tar"
+    exit 2
+}
+
+#check that we have fakechroot and chroot installed
+[ -z $(which fakechroot 2> /dev/null) ] && {
+    echo "unable to find fakechroot in path, exiting"
+    exit 1
+}
+
+[ -z $(which chroot 2> /dev/null) ] && {
+    echo "unable to find CHROOT in path, exiting"
+    exit 1
+}
+
+[ ! -f $ARCHIVE ] && {
+    echo "no such archive $ARCHIVE"
+    exit 1
+}
+
+#TODO rewrite archive to full path if relative  
+
+echo "[safertar] extracting $archive in fake chroot"
+
+SAFERTAR_DIR=$(mktemp -p $(pwd) -d safertar.XXXXX)
+
+ln -s $(which tar) ${SAFERTAR_DIR}/
+ln -s $ARCHIVE ${SAFERTAR_DIR}/
+fakechroot chroot $SAFERTAR_DIR /tar xvf $(basename $ARCHIVE)
+
+#cleanup and move resulting files to pwd
+find ${SAFERTAR_DIR} -type l -delete
+mv -i ${SAFERTAR_DIR} $(basename $ARCHIVE | sed 's/\.tar//g')_extracted
+
+echo "[safertar] done"
